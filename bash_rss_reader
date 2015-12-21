@@ -11,7 +11,6 @@ while true; do
     while [[ "$listen_list" != "" ]]; do
         #Get one feed
         feed=$( echo "$listen_list" | tail -n +1 | head -1 )
-#echo "$feed" # Debugging
         wget --quiet "$feed" -O $location_folder/rss_feed
         if [[ ! -f $location_folder/rss_feed ]]; then
             # No file found, for some reason, abort and go to the next feed
