@@ -1,0 +1,84 @@
+#!/bin/bash
+ 
+latest=$( date -R )
+#latest="Thu, 17 Dec 2015 16:03:25 +0100" # Left for debugging
+latest_temp=$latest
+location_folder=~/scripts/bash_rss
+listen_file=listen.txt
+ 
+while true; do
+    listen_list=$( cat $location_folder/$listen_file )
+    while [[ "$listen_list" != "" ]]; do
+        #Get one feed
+        feed=$( echo "$listen_list" | tail -n +1 | head -1 )
+#echo "$feed" # Debugging
+        wget --quiet "$feed" -O $location_folder/rss_feed
+        if [[ ! -f $location_folder/rss_feed ]]; then
+            # No file found, for some reason, abort and go to the next feed
+            listen_list=$( echo "$listen_list" | grep -v "$feed" )
+            continue
+        fi
+        #If the entire file is in one line, split it up
+        file_content=$( cat $location_folder/rss_feed | tr '>' '\n' | tr -s '\n' )
+        rm $location_folder/rss_feed
+ 
+        # Get a list of dates
+        dates_list=$( echo "$file_content" | grep "/pubDate" | cut -f1 -d'<' )
+        index=0; unset dates_array;
+        date=$( echo "$dates_list" | tail -n +1 | head -1 )
+        while [[ "$date" != "" ]]; do
+            if [[ $( date --date="$date" +%s ) -gt \
+                  $( date --date="$latest" +%s ) ]] && \
+               [[ $( date --date="$date" +%s ) -lt \
+                  $( date +%s) ]]; then
+                dates_array[index]="$date"
+                index=$(( index + 1 ))
+            fi
+            dates_list=$( echo "$dates_list" | grep -v "$date" )
+            date=$( echo "$dates_list" | tail -n +1 | head -1 )
+        done
+        index=$(( index - 1 ))
+ 
+        # If there's nothing to report, abort and go to the next feed
+        if [[ -z "${dates_array[*]}" ]]; then
+            listen_list=$( echo "$listen_list" | grep -v "$feed" )
+            continue
+        fi
+  
+        # Get and publish each new post
+        while [[ -n "${dates_array[*]}" ]] && [[ $index -ge 0 ]]; do
+            date_i="${dates_array[index]}" #The date to look at
+
+            info=${file_content%%$date_i*}
+            info=${info##*<title}
+
+            title=${info%%</title*}
+            if [[ $( echo "$title" | grep "<!" ) != "" ]]; then
+                # Because sometimes the title is in a weird place
+                title=${title#*CDATA\[}
+                title=${title%\]\]*}
+            fi
+
+            link=${info##*<link}
+            link=${link%%</link*}
+
+            #Display using dunst http://www.knopwob.org/dunst/
+            notify-send "$title" "$link"
+ 
+            unset dates_array[index]
+            index=$(( index - 1 ))
+        done
+        unset sub_array
+               
+        if [[ $( date --date="$date_i" +%s ) -gt \
+              $( date --date="$latest_temp" +%s ) ]]; then
+            #Save the date so we don't display the same thing again
+            latest_temp=$date_i
+        fi
+        #Go to the next feed
+        listen_list=$( echo "$listen_list" | grep -v "$feed" )
+    done
+    #All feeds checked, make sure that no item is looked at again
+    latest=$latest_temp
+    sleep 60
+done
