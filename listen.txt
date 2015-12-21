@@ -1,0 +1,5 @@
+http://blog.humblebundle.com/rss
+http://githubengineering.com/atom.xml
+http://blog.fogcreek.com/category/programming/feed/
+https://medium.com/feed/history-of-computer-science
+http://commandcenter.blogspot.com/feeds/posts/default?alt=rss
