@@ -62,7 +62,7 @@ while true; do
             link=${link%%</link*}
 
             #Display using dunst http://www.knopwob.org/dunst/
-            notify-send "$title" "$link"
+            notify-send -u normal -t 0 "$title" "$link"
  
             unset dates_array[index]
             index=$(( index - 1 ))
